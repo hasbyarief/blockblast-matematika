@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BLOCK BLAST DUEL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f13;
+            color: #ffffff;
+            touch-action: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 15, 25, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(42,42,53,0.9), rgba(31,31,40,0.9));
+            border: 2px solid #3d3d4d;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        button {
+            transition: transform 0.1s, filter 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+            filter: brightness(0.8);
+        }
+
+        .math-popup {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            z-index: 20;
+            background: rgba(20, 20, 30, 0.95);
+            border: 3px solid #ffcc00;
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(255,204,0,0.3);
+            display: none;
+            flex-direction: column;
+            width: 80%;
+            max-width: 300px;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .math-popup.active {
+            display: flex;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .split-divider {
+            position: absolute;
+            top: 0; bottom: 0; left: 50%;
+            width: 4px;
+            background: linear-gradient(to bottom, #FF3366, #33CCFF);
+            transform: translateX(-50%);
+            z-index: 30;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="start-screen" class="overlay active" style="background: #1a1a24; z-index: 100;">
+        <div class="glass-panel max-w-md w-full">
+            <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">BLOCK BLAST</h1>
+            <h2 class="text-2xl font-bold mb-4 text-red-400 border-b border-gray-600 pb-4">DUEL</h2>
+            
+            <div class="flex gap-4 mb-4">
+                <div class="w-1/2">
+                    <label class="text-xs text-blue-400 font-bold">NAMA P1</label>
+                    <input type="text" id="p1-input-name" value="PLAYER 1" class="w-full bg-gray-800 text-white border border-blue-500 rounded px-3 py-2 mt-1 text-sm font-bold text-center outline-none focus:ring-2 focus:ring-blue-400" maxlength="10">
+                </div>
+                <div class="w-1/2">
+                    <label class="text-xs text-red-400 font-bold">NAMA P2</label>
+                    <input type="text" id="p2-input-name" value="PLAYER 2" class="w-full bg-gray-800 text-white border border-red-500 rounded px-3 py-2 mt-1 text-sm font-bold text-center outline-none focus:ring-2 focus:ring-red-400" maxlength="10">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-xs text-yellow-400 font-bold">MATERI MATEMATIKA</label>
+                <select id="math-mode" class="w-full bg-gray-800 text-white border border-yellow-500 rounded px-3 py-2 mt-1 text-sm font-bold outline-none focus:ring-2 focus:ring-yellow-400">
+                    <option value="add">Penjumlahan (+)</option>
+                    <option value="sub">Pengurangan (-)</option>
+                    <option value="mul">Perkalian (x)</option>
+                    <option value="div">Pembagian (÷)</option>
+                    <option value="mix">Campuran (Acak)</option>
+                </select>
+            </div>
+
+            <p class="text-gray-300 text-xs mb-6 text-left space-y-2">
+                <span class="block">🎮 <b>Cara Main:</b> Susun blok untuk menghancurkan garis.</span>
+                <span class="block">⏱️ <b>Tantangan:</b> Hancurkan garis untuk memicu kuis matematika!</span>
+                <span class="block">🏆 <b>Menang:</b> Pemain pertama yang menjawab BENAR 10 SOAL adalah pemenangnya!</span>
+            </p>
+            <button id="start-btn" class="w-full bg-gradient-to-r from-green-400 to-blue-500 text-white font-black py-4 px-6 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.5)] text-xl">
+                START BATTLE!
+            </button>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="overlay">
+        <div class="glass-panel max-w-lg w-[90%]">
+            <h1 id="winner-text" class="text-3xl sm:text-4xl font-black mb-4 text-yellow-400 animate-pulse break-words">P1 WINS!</h1>
+            <p id="game-over-reason" class="text-gray-400 mb-6 text-sm">Berhasil menjawab 10 soal lebih dulu!</p>
+            <div class="flex justify-between mb-6">
+                <div class="text-center">
+                    <p class="text-xs text-blue-300">Jawaban P1</p>
+                    <p id="final-score-p1" class="text-2xl font-bold">0/10</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-red-300">Jawaban P2</p>
+                    <p id="final-score-p2" class="text-2xl font-bold">0/10</p>
+                </div>
+            </div>
+            <button id="rematch-btn" class="w-full bg-yellow-500 text-black font-black py-3 px-6 rounded-xl">
+                REMATCH
+            </button>
+        </div>
+    </div>
+    <div id="game-wrapper" class="w-full h-full flex flex-row relative hidden">
+        
+        <!-- Divider -->
+        <div class="split-divider"></div>
+
+        <!-- PLAYER 1 AREA (Left) -->
+        <div id="p1-area" class="w-1/2 h-full flex flex-col relative bg-[#151520]">
+            <!-- Header -->
+            <div class="py-3 flex justify-between items-center px-4 border-b border-gray-800 bg-[#1a1a24] min-h-[80px]">
+                <div class="flex flex-col justify-center">
+                    <span id="p1-name-display" class="block text-2xl text-blue-400 font-black uppercase tracking-wider truncate max-w-[150px] sm:max-w-[300px]">PLAYER 1</span>
+                    <span id="p1-score" class="text-sm font-black text-gray-400 leading-none mt-1">Skor: 0</span>
+                </div>
+                <div class="flex flex-col items-end">
+                    <div class="bg-blue-900 text-blue-200 text-base px-3 py-1 rounded font-bold shadow-lg">P1</div>
+                    <div id="p1-progress" class="text-base font-black text-yellow-400 mt-1 drop-shadow-md">0/10</div>
+                </div>
+            </div>
+            <!-- Canvas -->
+            <div class="flex-grow relative">
+                <canvas id="p1-canvas"></canvas>
+                <!-- Math Popup P1 -->
+                <div id="p1-math" class="math-popup border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]">
+                    <div class="text-blue-400 text-xs font-bold mb-1">JAWAB CEPAT!</div>
+                    <div id="p1-question" class="text-3xl font-black mb-2">5 + 7 = ?</div>
+                    <div class="w-full h-2 bg-gray-800 rounded-full mb-4 overflow-hidden border border-gray-600">
+                        <div id="p1-timer-bar" class="h-full bg-green-500" style="width: 100%"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2" id="p1-options">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLAYER 2 AREA (Right) -->
+        <div id="p2-area" class="w-1/2 h-full flex flex-col relative bg-[#181515]">
+            <!-- Header -->
+            <div class="py-3 flex justify-between items-center px-4 border-b border-gray-800 bg-[#221a1a] min-h-[80px]">
+                <div class="flex flex-col items-start">
+                    <div class="bg-red-900 text-red-200 text-base px-3 py-1 rounded font-bold shadow-lg">P2</div>
+                    <div id="p2-progress" class="text-base font-black text-yellow-400 mt-1 drop-shadow-md">0/10</div>
+                </div>
+                <div class="flex flex-col justify-center items-end">
+                    <span id="p2-name-display" class="block text-2xl text-red-400 font-black uppercase tracking-wider truncate max-w-[150px] sm:max-w-[300px] text-right">PLAYER 2</span>
+                    <span id="p2-score" class="text-sm font-black text-gray-400 leading-none mt-1">Skor: 0</span>
+                </div>
+            </div>
+            <!-- Canvas -->
+            <div class="flex-grow relative">
+                <canvas id="p2-canvas"></canvas>
+                <!-- Math Popup P2 -->
+                <div id="p2-math" class="math-popup border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                    <div class="text-red-400 text-xs font-bold mb-1">JAWAB CEPAT!</div>
+                    <div id="p2-question" class="text-3xl font-black mb-2">8 + 4 = ?</div>
+                    <div class="w-full h-2 bg-gray-800 rounded-full mb-4 overflow-hidden border border-gray-600">
+                        <div id="p2-timer-bar" class="h-full bg-green-500" style="width: 100%"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2" id="p2-options">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const AudioEngine = {
+            isReady: false,
+            bgmLoop: null,
+            synths: {},
+
+            async init() {
+                if (this.isReady) return;
+                await Tone.start();
+                Tone.Destination.volume.value = -5;
+
+                this.synths.place = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2 }).toDestination();
+                this.synths.clear = new Tone.PolySynth(Tone.FMSynth).toDestination();
+                this.synths.correct = new Tone.Synth({ oscillator: { type: "triangle" } }).toDestination();
+                this.synths.wrong = new Tone.Synth({ oscillator: { type: "sawtooth" } }).toDestination();
+
+                const melodySynth = new Tone.Synth({
+                    oscillator: { type: "square" },
+                    envelope: { attack: 0.02, decay: 0.2, sustain: 0.2, release: 0.5 }
+                }).toDestination();
+                melodySynth.volume.value = -12;
+
+                const bassSynth = new Tone.FMSynth({
+                    modulationIndex: 2,
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 }
+                }).toDestination();
+                bassSynth.volume.value = -15;
+
+                const melodyNotes = ["C4", "E4", "G4", "C5", "G4", "E4", "D4", "F4", "A4", "C5", "B4", "G4", "E4", "C4", "D4", "G3"];
+                const bassNotes = ["C3", "C3", "C3", "C3", "F2", "F2", "G2", "G2", "C3", "C3", "C3", "C3", "F2", "F2", "G2", "G2"];
+
+                let step = 0;
+                this.bgmLoop = new Tone.Loop((time) => {
+                    let mNote = melodyNotes[step % melodyNotes.length];
+                    let bNote = bassNotes[step % bassNotes.length];
+                    
+                    melodySynth.triggerAttackRelease(mNote, "16n", time);
+                    if (step % 2 === 0) bassSynth.triggerAttackRelease(bNote, "8n", time);
+                    
+                    step++;
+                }, "8n");
+
+                Tone.Transport.bpm.value = 140;
+                this.isReady = true;
+            },
+
+            playBGM() {
+                if (!this.isReady) return;
+                Tone.Transport.start();
+                this.bgmLoop.start(0);
+            },
+
+            stopBGM() {
+                if (!this.isReady) return;
+                Tone.Transport.stop();
+                this.bgmLoop.stop();
+            },
+
+            playPlace() {
+                if (!this.isReady) return;
+                this.synths.place.triggerAttackRelease("C2", "8n");
+            },
+
+            playClear(combo) {
+                if (!this.isReady) return;
+                const chords = [
+                    ["C4", "E4", "G4"], 
+                    ["E4", "G4", "B4"], 
+                    ["G4", "B4", "D5"], 
+                    ["C5", "E5", "G5"]  
+                ];
+                let idx = Math.min(combo - 1, 3);
+                this.synths.clear.triggerAttackRelease(chords[idx], "4n");
+            },
+
+            playCorrect() {
+                if (!this.isReady) return;
+                const now = Tone.now();
+                this.synths.correct.triggerAttackRelease("C5", "16n", now);
+                this.synths.correct.triggerAttackRelease("E5", "8n", now + 0.15);
+            },
+
+            playWrong() {
+                if (!this.isReady) return;
+                const now = Tone.now();
+                this.synths.wrong.triggerAttackRelease("E3", "16n", now);
+                this.synths.wrong.triggerAttackRelease("C3", "8n", now + 0.15);
+            }
+        };
+
+        const GRID_SIZE = 8;
+        const CLEAR_ANIM_DURATION = 15;
+        
+        // Blok Mudah
+        const SHAPES_EASY = [
+            [[1]], [[1, 1]], [[1], [1]], 
+            [[1, 1, 1]], [[1], [1], [1]],
+            [[1, 1], [1, 1]]
+        ];
+        
+        // Blok Sedang
+        const SHAPES_MEDIUM = [
+            [[1, 0], [1, 1]], [[0, 1], [1, 1]], [[1, 1], [1, 0]], [[1, 1], [0, 1]],
+            [[1, 1, 1, 1]], [[1], [1], [1], [1]],
+            [[1, 1, 1], [0, 1, 0]], [[0, 1, 0], [1, 1, 1]],
+            [[1, 0], [1, 1], [1, 0]], [[0, 1], [1, 1], [0, 1]]
+        ];
+        
+        // Blok Sulit
+        const SHAPES_HARD = [
+            [[1, 1, 1, 1, 1]], [[1], [1], [1], [1], [1]],
+            [[1, 1, 1], [1, 1, 1], [1, 1, 1]],
+            [[1, 0, 0], [1, 0, 0], [1, 1, 1]], [[0, 0, 1], [0, 0, 1], [1, 1, 1]],
+            [[1, 1, 1], [1, 0, 0], [1, 0, 0]], [[1, 1, 1], [0, 0, 1], [0, 0, 1]]
+        ];
+
+        let globalMathMode = "add"; // Default materi matematika
+
+        const P1_COLORS = ['#33CCFF', '#3366FF', '#9933FF', '#38bdf8'];
+        const P2_COLORS = ['#FF3366', '#FF6600', '#FFCC00', '#f43f5e'];
+        
+        const BOARD_BG = 'rgba(0,0,0,0)';
+        const CELL_BG = 'rgba(255,255,255,0.2)'; // Lebih Cerah!
+
+        function drawRoundRect(ctx, x, y, w, h, r, color, shadow=true) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+            
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            if (shadow) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y + 2);
+                ctx.lineTo(x + w - r, y + 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(x + 2, y + h - r);
+                ctx.lineTo(x + w - 2, y + h - r);
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        class PlayerBoard {
+            constructor(playerId, canvasId, colorPalette, scoreElementId, mathPopupId, timerBarId, progressId) {
+                this.id = playerId;
+                this.playerName = playerId;
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d', { alpha: true });
+                this.colors = colorPalette;
+                
+                this.scoreEl = document.getElementById(scoreElementId);
+                this.mathPopup = document.getElementById(mathPopupId);
+                this.mathQuestion = this.mathPopup.querySelector('#' + playerId.toLowerCase() + '-question');
+                this.mathOptions = this.mathPopup.querySelector('#' + playerId.toLowerCase() + '-options');
+                this.timerBar = document.getElementById(timerBarId);
+                this.progressEl = document.getElementById(progressId);
+
+                this.resetState();
+                
+                this.handlePointerDown = this.handlePointerDown.bind(this);
+                this.handlePointerMove = this.handlePointerMove.bind(this);
+                this.handlePointerUp = this.handlePointerUp.bind(this);
+                this.draw = this.draw.bind(this);
+                this.resize = this.resize.bind(this);
+
+                this.canvas.addEventListener('mousedown', this.handlePointerDown);
+                this.canvas.addEventListener('mousemove', this.handlePointerMove, { passive: false });
+                this.canvas.addEventListener('mouseup', this.handlePointerUp);
+                this.canvas.addEventListener('mouseleave', this.handlePointerUp);
+
+                this.canvas.addEventListener('touchstart', this.handlePointerDown, { passive: false });
+                this.canvas.addEventListener('touchmove', this.handlePointerMove, { passive: false });
+                this.canvas.addEventListener('touchend', this.handlePointerUp);
+                this.canvas.addEventListener('touchcancel', this.handlePointerUp);
+            }
+
+            resetState() {
+                this.board = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+                this.score = 0;
+                this.scoreEl.innerText = "Skor: 0";
+                this.isGameOver = false;
+                this.isPaused = false; 
+                this.isWaiting = false;
+                
+                this.correctMath = 0; // Target menang = 10
+                if (this.progressEl) this.progressEl.innerText = `0/10`;
+                
+                this.availableBlocks = [null, null, null];
+                this.dragState = { active: false, index: -1, shape: null, color: null, cx: 0, cy: 0, oy: 0, touchId: null };
+                
+                this.clearingLines = [];
+                this.floatingTexts = [];
+                
+                this.mathAnswer = 0; 
+                this.pendingPoints = 0; 
+                this.mathStartTime = 0;
+                this.mathDuration = 10000;
+
+                this.refillBlocks();
+            }
+
+            resize() {
+                const parent = this.canvas.parentElement;
+                const rect = parent.getBoundingClientRect();
+                this.width = rect.width;
+                this.height = rect.height;
+                const dpr = window.devicePixelRatio || 1;
+                this.canvas.width = this.width * dpr;
+                this.canvas.height = this.height * dpr;
+                this.canvas.style.width = this.width + 'px';
+                this.canvas.style.height = this.height + 'px';
+                this.ctx.scale(dpr, dpr);
+
+                const maxBoardByWidth = this.width * 0.95; 
+                const maxBoardByHeight = this.height * 0.65; 
+                const maxBoard = Math.min(maxBoardByWidth, maxBoardByHeight);
+                
+                this.cellSize = Math.floor(maxBoard / GRID_SIZE);
+                const actualSize = this.cellSize * GRID_SIZE;
+                
+                this.boardX = (this.width - actualSize) / 2;
+                this.boardY = Math.max(15, this.height * 0.05); 
+                
+                const remainingHeight = this.height - (this.boardY + actualSize);
+                this.trayY = this.boardY + actualSize + (remainingHeight / 2); 
+                
+                this.updateTrayPositions();
+            }
+
+            getRandomShape() {
+                let r = Math.random();
+                let shapeGroup;
+                
+                // Probabilitas 2x lebih mudah (85% blok gampang)
+                if (r < 0.85) shapeGroup = SHAPES_EASY;
+                else if (r < 0.98) shapeGroup = SHAPES_MEDIUM;
+                else shapeGroup = SHAPES_HARD;
+                
+                const shape = shapeGroup[Math.floor(Math.random() * shapeGroup.length)];
+                const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                return { shape, color };
+            }
+
+            refillBlocks() {
+                for (let i = 0; i < 3; i++) {
+                    if (!this.availableBlocks[i]) {
+                        const { shape, color } = this.getRandomShape();
+                        this.availableBlocks[i] = { shape, color, scale: 0.8, x: 0, y: 0 }; 
+                    }
+                }
+                this.updateTrayPositions();
+                this.checkGameOver();
+            }
+
+            updateTrayPositions() {
+                const secW = this.width / 3;
+                for (let i = 0; i < 3; i++) {
+                    if (this.availableBlocks[i]) {
+                        this.availableBlocks[i].x = (secW * i) + (secW / 2);
+                        this.availableBlocks[i].y = this.trayY; 
+                    }
+                }
+            }
+
+            canPlace(shape, r, c) {
+                for (let i = 0; i < shape.length; i++) {
+                    for (let j = 0; j < shape[i].length; j++) {
+                        if (shape[i][j]) {
+                            let br = r + i, bc = c + j;
+                            if (br < 0 || br >= GRID_SIZE || bc < 0 || bc >= GRID_SIZE) return false;
+                            if (this.board[br][bc] !== null) return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            canPlaceAnywhere(shape) {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (this.canPlace(shape, r, c)) return true;
+                    }
+                }
+                return false;
+            }
+
+            checkGameOver() {
+                if (this.isGameOver || this.isWaiting) return;
+                let blocksLeft = 0, hasMoves = false;
+                for (let block of this.availableBlocks) {
+                    if (block) {
+                        blocksLeft++;
+                        if (this.canPlaceAnywhere(block.shape)) hasMoves = true;
+                    }
+                }
+                if (blocksLeft === 0) {
+                    this.refillBlocks();
+                    return;
+                }
+                if (!hasMoves) {
+                    this.isWaiting = true;
+                    checkGlobalGameOver(); 
+                }
+            }
+
+            checkLines() {
+                let rClear = [], cClear = [];
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    if (this.board[r].every(cell => cell !== null)) rClear.push(r);
+                }
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    let full = true;
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        if (this.board[r][c] === null) { full = false; break; }
+                    }
+                    if (full) cClear.push(c);
+                }
+
+                let total = rClear.length + cClear.length;
+                if (total > 0) {
+                    AudioEngine.playClear(total);
+                    let points = 100 * ((total * (total + 1)) / 2);
+                    let popText = ["GOOD!", "GREAT!", "EXCELLENT!", "AMAZING!"][Math.min(total-1, 3)];
+                    let popColor = this.colors[Math.min(total-1, this.colors.length-1)];
+                    let cx = this.boardX + (GRID_SIZE * this.cellSize)/2;
+                    let cy = this.boardY + (GRID_SIZE * this.cellSize)/2;
+
+                    this.floatingTexts.push({ text: popText, x: cx, y: cy-20, a: 1, dy: -0.7, t: 100, c: popColor, s: 30 });
+                    
+                    rClear.forEach(r => {
+                        this.clearingLines.push({ idx: r, isR: true, t: CLEAR_ANIM_DURATION });
+                        for(let c=0; c<GRID_SIZE; c++) this.board[r][c] = null;
+                    });
+                    cClear.forEach(c => {
+                        this.clearingLines.push({ idx: c, isR: false, t: CLEAR_ANIM_DURATION });
+                        for(let r=0; r<GRID_SIZE; r++) this.board[r][c] = null;
+                    });
+
+                    this.triggerMathPopup(points);
+                }
+            }
+
+            updateScore(points) {
+                this.score += points;
+                this.scoreEl.innerText = `Skor: ${this.score}`;
+            }
+
+            triggerMathPopup(points) {
+                this.isPaused = true;
+                this.pendingPoints = points;
+                
+                let a, b, op;
+                let mode = globalMathMode;
+                if (mode === "mix") {
+                    const ops = ["add", "sub", "mul", "div"];
+                    mode = ops[Math.floor(Math.random() * ops.length)];
+                }
+
+                if (mode === "add") {
+                    a = Math.floor(Math.random() * 10) + 1;
+                    b = Math.floor(Math.random() * 10) + 1;
+                    this.mathAnswer = a + b;
+                    op = '+';
+                } else if (mode === "sub") {
+                    a = Math.floor(Math.random() * 15) + 5;
+                    b = Math.floor(Math.random() * a) + 1;  
+                    this.mathAnswer = a - b;
+                    op = '-';
+                } else if (mode === "mul") {
+                    a = Math.floor(Math.random() * 9) + 1; 
+                    b = Math.floor(Math.random() * 5) + 1; 
+                    this.mathAnswer = a * b;
+                    op = 'x';
+                } else if (mode === "div") {
+                    b = Math.floor(Math.random() * 5) + 1; 
+                    this.mathAnswer = Math.floor(Math.random() * 9) + 1; 
+                    a = b * this.mathAnswer; 
+                    op = '÷';
+                }
+                
+                this.mathQuestion.innerText = `${a} ${op} ${b} = ?`;
+                
+                let opts = [this.mathAnswer];
+                while(opts.length < 3) {
+                    let w;
+                    if (mode === "mul" || mode === "div") {
+                        w = this.mathAnswer + (Math.floor(Math.random() * 10) - 5);
+                    } else {
+                        w = this.mathAnswer + (Math.floor(Math.random() * 6) - 3);
+                    }
+                    if (w !== this.mathAnswer && w >= 0 && !opts.includes(w)) opts.push(w);
+                }
+                opts.sort(() => Math.random() - 0.5); 
+                
+                this.mathOptions.innerHTML = '';
+                opts.forEach(num => {
+                    let btn = document.createElement('button');
+                    btn.className = `bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded border border-gray-600 text-xl`;
+                    btn.innerText = num;
+                    const handleAnswer = (e) => {
+                        e.preventDefault(); 
+                        this.submitMathAnswer(num);
+                    };
+                    btn.addEventListener('click', handleAnswer);
+                    btn.addEventListener('touchstart', handleAnswer, {passive: false});
+                    this.mathOptions.appendChild(btn);
+                });
+
+                this.mathStartTime = performance.now();
+                this.mathPopup.classList.add('active');
+            }
+
+            submitMathAnswer(val, isTimeout = false) {
+                if (!this.isPaused) return; 
+                
+                if (isTimeout) {
+                    AudioEngine.playWrong();
+                    this.floatingTexts.push({ text: `WAKTU HABIS!`, x: this.width/2, y: this.height/2, a: 1, dy: 1, t: 80, c: "#ff0000", s: 24 });
+                } else if (val === this.mathAnswer) {
+                    AudioEngine.playCorrect();
+                    this.updateScore(this.pendingPoints);
+                    this.correctMath++; 
+                    if (this.progressEl) this.progressEl.innerText = `${this.correctMath}/10`;
+                    
+                    this.floatingTexts.push({ text: `BENAR! (${this.correctMath}/10)`, x: this.width/2, y: this.height/2, a: 1, dy: -1, t: 80, c: "#00ff00", s: 24 });
+                    
+                    if (this.correctMath >= 10) {
+                        this.isPaused = false;
+                        this.mathPopup.classList.remove('active');
+                        triggerWin(this); 
+                        return;
+                    }
+                } else {
+                    AudioEngine.playWrong();
+                    this.floatingTexts.push({ text: `SALAH!`, x: this.width/2, y: this.height/2, a: 1, dy: 1, t: 80, c: "#ff0000", s: 24 });
+                }
+                
+                this.mathPopup.classList.remove('active');
+                this.isPaused = false;
+                this.checkGameOver();
+            }
+
+            getTouchPos(touch) {
+                const rect = this.canvas.getBoundingClientRect();
+                return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+            }
+
+            getMousePos(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }
+
+            checkGrabBlock(pos, type, touchId) {
+                for (let i = 0; i < 3; i++) {
+                    const blk = this.availableBlocks[i];
+                    if (!blk) continue;
+                    
+                    const sw = blk.shape[0].length * this.cellSize * blk.scale;
+                    const sh = blk.shape.length * this.cellSize * blk.scale;
+                    const margin = 25; 
+
+                    if (pos.x >= blk.x - sw/2 - margin && pos.x <= blk.x + sw/2 + margin &&
+                        pos.y >= blk.y - sh/2 - margin && pos.y <= blk.y + sh/2 + margin) {
+                        
+                        this.dragState = {
+                            active: true, index: i, shape: blk.shape, color: blk.color,
+                            cx: pos.x, cy: pos.y, 
+                            oy: type.includes('touch') ? - (this.cellSize * blk.shape.length) - 30 : 0,
+                            touchId: touchId
+                        };
+                        break;
+                    }
+                }
+            }
+
+            handlePointerDown(e) {
+                if (this.isGameOver || this.isPaused || this.isWaiting) return;
+                
+                if (e.type === 'touchstart') {
+                    e.preventDefault(); 
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        let pos = this.getTouchPos(e.changedTouches[i]);
+                        this.checkGrabBlock(pos, e.type, e.changedTouches[i].identifier);
+                    }
+                } else {
+                    const pos = this.getMousePos(e);
+                    this.checkGrabBlock(pos, e.type, 'mouse');
+                }
+            }
+
+            handlePointerMove(e) {
+                if (!this.dragState.active || this.isPaused) return;
+                
+                if (e.type === 'touchmove') {
+                    e.preventDefault();
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === this.dragState.touchId) {
+                            let pos = this.getTouchPos(e.changedTouches[i]);
+                            this.dragState.cx = pos.x;
+                            this.dragState.cy = pos.y + this.dragState.oy;
+                        }
+                    }
+                } else {
+                    if (this.dragState.touchId === 'mouse') {
+                        const pos = this.getMousePos(e);
+                        this.dragState.cx = pos.x;
+                        this.dragState.cy = pos.y + this.dragState.oy;
+                    }
+                }
+            }
+
+            handlePointerUp(e) {
+                if (!this.dragState.active) return;
+                
+                let released = false;
+                if (e.type === 'touchend' || e.type === 'touchcancel') {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === this.dragState.touchId) {
+                            released = true;
+                            if (e.cancelable) e.preventDefault();
+                        }
+                    }
+                } else if (this.dragState.touchId === 'mouse') {
+                    released = true;
+                }
+
+                if (!released) return;
+
+                const d = this.dragState;
+                const sc = d.shape[0].length;
+                const sr = d.shape.length;
+                const gx = Math.round((d.cx - (sc * this.cellSize)/2 - this.boardX) / this.cellSize);
+                const gy = Math.round((d.cy - (sr * this.cellSize)/2 - this.boardY) / this.cellSize);
+
+                if (this.canPlace(d.shape, gy, gx)) {
+                    for (let r=0; r<sr; r++) {
+                        for (let c=0; c<sc; c++) {
+                            if (d.shape[r][c]) this.board[gy+r][gx+c] = d.color;
+                        }
+                    }
+                    AudioEngine.playPlace();
+                    if(navigator.vibrate) navigator.vibrate(15);
+                    
+                    let pts = d.shape.flat().filter(v=>v).length * 10;
+                    this.updateScore(pts);
+                    this.floatingTexts.push({ text: `+${pts}`, x: d.cx, y: d.cy-40, a: 1, dy: -0.5, t: 60, c: "#fff", s: 18 });
+                    
+                    this.availableBlocks[d.index] = null;
+                    this.checkLines();
+                    this.checkGameOver();
+                }
+
+                this.dragState.active = false;
+                this.dragState.touchId = null;
+            }
+
+            drawShape(shape, color, startX, startY, size, alpha=1) {
+                this.ctx.globalAlpha = alpha;
+                for (let r = 0; r < shape.length; r++) {
+                    for (let c = 0; c < shape[r].length; c++) {
+                        if (shape[r][c]) {
+                            drawRoundRect(this.ctx, startX + c * size + 1, startY + r * size + 1, size - 2, size - 2, 4, color, true);
+                        }
+                    }
+                }
+                this.ctx.globalAlpha = 1;
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                for (let r=0; r<GRID_SIZE; r++) {
+                    for (let c=0; c<GRID_SIZE; c++) {
+                        drawRoundRect(this.ctx, this.boardX + c*this.cellSize + 1, this.boardY + r*this.cellSize + 1, this.cellSize-2, this.cellSize-2, 4, CELL_BG, false);
+                    }
+                }
+
+                for (let r=0; r<GRID_SIZE; r++) {
+                    for (let c=0; c<GRID_SIZE; c++) {
+                        if (this.board[r][c]) {
+                            drawRoundRect(this.ctx, this.boardX + c*this.cellSize + 1, this.boardY + r*this.cellSize + 1, this.cellSize-2, this.cellSize-2, 4, this.board[r][c], true);
+                        }
+                    }
+                }
+
+                for (let i = this.clearingLines.length - 1; i >= 0; i--) {
+                    let anim = this.clearingLines[i];
+                    let p = anim.t / CLEAR_ANIM_DURATION;
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${p * 0.9})`;
+                    if (anim.isR) this.ctx.fillRect(this.boardX, this.boardY + anim.idx * this.cellSize, this.cellSize * GRID_SIZE, this.cellSize);
+                    else this.ctx.fillRect(this.boardX + anim.idx * this.cellSize, this.boardY, this.cellSize, this.cellSize * GRID_SIZE);
+                    anim.t--;
+                    if (anim.t <= 0) this.clearingLines.splice(i, 1);
+                }
+
+                if (this.dragState.active) {
+                    const sc = this.dragState.shape[0].length;
+                    const sr = this.dragState.shape.length;
+                    const gx = Math.round((this.dragState.cx - (sc * this.cellSize)/2 - this.boardX) / this.cellSize);
+                    const gy = Math.round((this.dragState.cy - (sr * this.cellSize)/2 - this.boardY) / this.cellSize);
+                    if (this.canPlace(this.dragState.shape, gy, gx)) {
+                        this.drawShape(this.dragState.shape, this.dragState.color, this.boardX + gx*this.cellSize, this.boardY + gy*this.cellSize, this.cellSize, 0.4);
+                    }
+                }
+
+                for (let i=0; i<3; i++) {
+                    let b = this.availableBlocks[i];
+                    if (b && (!this.dragState.active || this.dragState.index !== i)) {
+                        let sw = b.shape[0].length * this.cellSize * b.scale;
+                        let sh = b.shape.length * this.cellSize * b.scale;
+                        this.drawShape(b.shape, b.color, b.x - sw/2, b.y - sh/2, this.cellSize * b.scale);
+                    }
+                }
+
+                if (this.dragState.active) {
+                    const sc = this.dragState.shape[0].length;
+                    const sr = this.dragState.shape.length;
+                    const dx = this.dragState.cx - (sc * this.cellSize)/2;
+                    const dy = this.dragState.cy - (sr * this.cellSize)/2;
+                    this.drawShape(this.dragState.shape, this.dragState.color, dx, dy, this.cellSize);
+                }
+
+                for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = this.floatingTexts[i];
+                    this.ctx.save();
+                    this.ctx.globalAlpha = Math.max(0, ft.a);
+                    this.ctx.font = `900 ${ft.s}px 'Inter', sans-serif`;
+                    this.ctx.textAlign = "center";
+                    this.ctx.textBaseline = "middle";
+                    this.ctx.lineJoin = "round";
+                    this.ctx.lineWidth = 5;
+                    this.ctx.strokeStyle = "rgba(0,0,0,0.8)";
+                    this.ctx.strokeText(ft.text, ft.x, ft.y);
+                    this.ctx.fillStyle = ft.c;
+                    this.ctx.fillText(ft.text, ft.x, ft.y);
+                    this.ctx.restore();
+                    ft.y += ft.dy;
+                    ft.a -= 0.01;
+                    ft.t--;
+                    if (ft.t <= 0 || ft.a <= 0) this.floatingTexts.splice(i, 1);
+                }
+
+                // Render Pause Filter & Timer
+                if (this.isPaused) {
+                    this.ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    this.ctx.fillRect(0,0,this.width, this.height);
+                    
+                    let elapsed = performance.now() - this.mathStartTime;
+                    let timeLeft = Math.max(0, this.mathDuration - elapsed);
+                    let pct = (timeLeft / this.mathDuration) * 100;
+                    
+                    if (this.timerBar) {
+                        this.timerBar.style.width = pct + "%";
+                        if (pct > 50) this.timerBar.className = "h-full bg-green-500 transition-colors";
+                        else if (pct > 25) this.timerBar.className = "h-full bg-yellow-500 transition-colors";
+                        else this.timerBar.className = "h-full bg-red-500 transition-colors";
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        this.submitMathAnswer(null, true);
+                    }
+                }
+
+                // Render Overlay Menunggu Lawan
+                if (this.isWaiting && !this.isGameOver) {
+                    this.ctx.fillStyle = "rgba(0,0,0,0.75)";
+                    this.ctx.fillRect(0,0,this.width, this.height);
+                    
+                    this.ctx.fillStyle = "#ff3366";
+                    this.ctx.font = "900 36px 'Inter', sans-serif";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText("OUT OF MOVES!", this.width/2, this.height/2 - 40);
+                    
+                    this.ctx.fillStyle = "#ffffff";
+                    this.ctx.font = "600 16px 'Inter', sans-serif";
+                    this.ctx.fillText("Menunggu permainan selesai...", this.width/2, this.height/2 + 40);
+                }
+            }
+        }
+
+        let player1, player2;
+        let mainLoopId;
+        
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
+        const gameWrapper = document.getElementById('game-wrapper');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const rematchBtn = document.getElementById('rematch-btn');
+        const mathModeSelect = document.getElementById('math-mode');
+
+        function initApp() {
+            player1 = new PlayerBoard('P1', 'p1-canvas', P1_COLORS, 'p1-score', 'p1-math', 'p1-timer-bar', 'p1-progress');
+            player2 = new PlayerBoard('P2', 'p2-canvas', P2_COLORS, 'p2-score', 'p2-math', 'p2-timer-bar', 'p2-progress');
+            
+            window.addEventListener('resize', () => {
+                player1.resize();
+                player2.resize();
+            });
+        }
+
+        function loop() {
+            player1.draw();
+            player2.draw();
+            mainLoopId = requestAnimationFrame(loop);
+        }
+
+        function requestFullScreen() {
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen().catch(e => console.log(e));
+            } else if (docElm.webkitRequestFullscreen) {
+                docElm.webkitRequestFullscreen().catch(e => console.log(e));
+            }
+        }
+
+        async function startGame() {
+            requestFullScreen();
+            await AudioEngine.init(); 
+            
+            const p1Name = document.getElementById('p1-input-name').value || "PLAYER 1";
+            const p2Name = document.getElementById('p2-input-name').value || "PLAYER 2";
+            globalMathMode = mathModeSelect.value;
+            
+            document.getElementById('p1-name-display').innerText = p1Name;
+            document.getElementById('p2-name-display').innerText = p2Name;
+            
+            player1.playerName = p1Name;
+            player2.playerName = p2Name;
+            
+            startScreen.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            gameWrapper.classList.remove('hidden');
+            
+            player1.resetState();
+            player2.resetState();
+            
+            player1.resize();
+            player2.resize();
+            
+            AudioEngine.playBGM();
+            
+            if(!mainLoopId) loop();
+        }
+
+        function checkGlobalGameOver() {
+            if (player1.isWaiting && player2.isWaiting) {
+                // Keduanya out of moves tanpa ada yang capai 10
+                finishGameDraw();
+            }
+        }
+        
+        function triggerWin(winner) {
+            AudioEngine.stopBGM();
+            player1.isGameOver = true;
+            player2.isGameOver = true;
+            
+            const winnerText = document.getElementById('winner-text');
+            const reasonText = document.getElementById('game-over-reason');
+            
+            reasonText.innerText = "Berhasil menjawab 10 soal lebih dulu!";
+            
+            if (winner.id === 'P1') {
+                winnerText.innerText = `${player1.playerName} WINS!`;
+                winnerText.className = "text-3xl sm:text-4xl font-black mb-4 text-blue-500 animate-pulse uppercase break-words px-4";
+            } else {
+                winnerText.innerText = `${player2.playerName} WINS!`;
+                winnerText.className = "text-3xl sm:text-4xl font-black mb-4 text-red-500 animate-pulse uppercase break-words px-4";
+            }
+            
+            document.getElementById('final-score-p1').innerText = `${player1.correctMath}/10`;
+            document.getElementById('final-score-p2').innerText = `${player2.correctMath}/10`;
+
+            gameOverScreen.classList.add('active');
+        }
+
+        function finishGameDraw() {
+            AudioEngine.stopBGM();
+            player1.isGameOver = true;
+            player2.isGameOver = true;
+
+            const winnerText = document.getElementById('winner-text');
+            const reasonText = document.getElementById('game-over-reason');
+            
+            reasonText.innerText = "Kedua pemain kehabisan ruang sebelum mencapai 10 jawaban.";
+            winnerText.innerText = "SERI / DRAW!";
+            winnerText.className = "text-3xl sm:text-4xl font-black mb-4 text-yellow-400 animate-pulse uppercase break-words px-4";
+            
+            document.getElementById('final-score-p1').innerText = `${player1.correctMath}/10`;
+            document.getElementById('final-score-p2').innerText = `${player2.correctMath}/10`;
+
+            gameOverScreen.classList.add('active');
+        }
+
+        startBtn.addEventListener('click', startGame);
+        rematchBtn.addEventListener('click', startGame);
+
+        initApp();
+
+    </script>
+</body>
+</html>
